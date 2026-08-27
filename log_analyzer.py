@@ -24,9 +24,9 @@ def analyze_log(filename):
                 levels["ERROR"] += 1
                 errors[line] += 1
 
-            # Find IP address
+            # Find IP addresses
             if "IP=" in line:
-                ip = line.split("IP=")[1]
+                ip = line.split("IP=")[1].split()[0]
                 ips[ip] += 1
 
     print("\n===== LOG ANALYZER REPORT =====")
@@ -41,7 +41,7 @@ def analyze_log(filename):
 
     print("\nErrors:")
     for error, count in errors.most_common(5):
-        print(f"{count}x - {error}")
+        print(f"{count}x: {error}")
 
 
 analyze_log("sample.log")
