@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Log Generator | SOC Monitor</title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                #061f18;
+
+            color:
+                #e5f7ef;
+        }
+
+
+        /* ==================================================
+           HEADER
+        ================================================== */
+
+        .header {
+
+            background:
+                #082c21;
+
+            border-bottom:
+                1px solid #166534;
+
+            padding:
+                18px 25px;
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            position:
+                sticky;
+
+            top: 0;
+
+            z-index: 10;
+        }
+
+
+        .header h1 {
+
+            margin: 0;
+
+            font-size:
+                22px;
+
+            color:
+                #86efac;
+        }
+
+
+        .header span {
+
+            font-size:
+                13px;
+
+            color:
+                #94a3b8;
+        }
+
+
+        /* ==================================================
+           MAIN
+        ================================================== */
+
+        .container {
+
+            max-width:
+                1250px;
+
+            margin:
+                auto;
+
+            padding:
+                25px;
+        }
+
+
+        .grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(
+                        280px,
+                        1fr
+                    )
+                );
+
+            gap:
+                18px;
+        }
+
+
+        .card {
+
+            background:
+                #082c21;
+
+            border:
+                1px solid #166534;
+
+            border-radius:
+                12px;
+
+            padding:
+                20px;
+
+            box-shadow:
+                0 8px 25px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    0.25
+                );
+        }
+
+
+        .card h2 {
+
+            margin-top:
+                0;
+
+            color:
+                #86efac;
+
+            font-size:
+                17px;
+        }
+
+
+        /* ==================================================
+           FORM
+        ================================================== */
+
+        label {
+
+            display:
+                block;
+
+            margin-top:
+                14px;
+
+            margin-bottom:
+                6px;
+
+            color:
+                #a7f3d0;
+
+            font-size:
+                13px;
+        }
+
+
+        input,
+        select {
+
+            width:
+                100%;
+
+            padding:
+                11px;
+
+            border-radius:
+                7px;
+
+            border:
+                1px solid #166534;
+
+            background:
+                #061f18;
+
+            color:
+                white;
+
+            outline:
+                none;
+        }
+
+
+        input:focus,
+        select:focus {
+
+            border-color:
+                #22c55e;
+        }
+
+
+        /* ==================================================
+           BUTTONS
+        ================================================== */
+
+        .buttons {
+
+            display:
+                flex;
+
+            flex-wrap:
+                wrap;
+
+            gap:
+                10px;
+
+            margin-top:
+                20px;
+        }
+
+
+        button {
+
+            border:
+                none;
+
+            border-radius:
+                7px;
+
+            padding:
+                11px 16px;
+
+            cursor:
+                pointer;
+
+            font-weight:
+                bold;
+
+            transition:
+                0.2s;
+        }
+
+
+        .generate {
+
+            background:
+                #16a34a;
+
+            color:
+                white;
+        }
+
+
+        .generate:hover {
+
+            background:
+                #22c55e;
+        }
+
+
+        .start {
+
+            background:
+                #15803d;
+
+            color:
+                white;
+        }
+
+
+        .stop {
+
+            background:
+                #b91c1c;
+
+            color:
+                white;
+        }
+
+
+        .brute {
+
+            background:
+                #92400e;
+
+            color:
+                white;
+        }
+
+
+        .clear {
+
+            background:
+                #334155;
+
+            color:
+                white;
+        }
+
+
+        button:hover {
+
+            transform:
+                translateY(-1px);
+        }
+
+
+        button:disabled {
+
+            opacity:
+                0.5;
+
+            cursor:
+                not-allowed;
+
+            transform:
+                none;
+        }
+
+
+        /* ==================================================
+           AUTO STATUS
+        ================================================== */
+
+        .auto-status {
+
+            margin-top:
+                15px;
+
+            padding:
+                12px;
+
+            border-radius:
+                8px;
+
+            background:
+                #061f18;
+
+            border:
+                1px solid #166534;
+
+            font-size:
+                13px;
+        }
+
+
+        .status-dot {
+
+            display:
+                inline-block;
+
+            width:
+                9px;
+
+            height:
+                9px;
+
+            border-radius:
+                50%;
+
+            background:
+                #64748b;
+
+            margin-right:
+                7px;
+        }
+
+
+        .status-dot.running {
+
+            background:
+                #22c55e;
+
+            box-shadow:
+                0 0 10px
+                #22c55e;
+        }
+
+
+        /* ==================================================
+           STATISTICS
+        ================================================== */
+
+        .stats {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(
+                    3,
+                    1fr
+                );
+
+            gap:
+                12px;
+
+            margin-top:
+                15px;
+        }
+
+
+        .stat {
+
+            background:
+                #061f18;
+
+            border:
+                1px solid #166534;
+
+            border-radius:
+                9px;
+
+            padding:
+                15px;
+
+            text-align:
+                center;
+        }
+
+
+        .stat-number {
+
+            font-size:
+                24px;
+
+            font-weight:
+                bold;
+
+            color:
+                #4ade80;
+        }
+
+
+        .stat-label {
+
+            margin-top:
+                5px;
+
+            color:
+                #94a3b8;
+
+            font-size:
+                12px;
+        }
+
+
+        /* ==================================================
+           OUTPUT
+        ================================================== */
+
+        textarea {
+
+            width:
+                100%;
+
+            height:
+                420px;
+
+            resize:
+                vertical;
+
+            margin-top:
+                10px;
+
+            padding:
+                15px;
+
+            background:
+                #020f0b;
+
+            color:
+                #86efac;
+
+            border:
+                1px solid #166534;
+
+            border-radius:
+                8px;
+
+            font-family:
+                Consolas,
+                monospace;
+
+            font-size:
+                13px;
+
+            line-height:
+                1.6;
+
+            outline:
+                none;
+        }
+
+
+        /* ==================================================
+           MESSAGE
+        ================================================== */
+
+        .message {
+
+            margin-top:
+                15px;
+
+            padding:
+                12px;
+
+            border-radius:
+                8px;
+
+            display:
+                none;
+
+            font-size:
+                13px;
+        }
+
+
+        .message.success {
+
+            display:
+                block;
+
+            background:
+                rgba(
+                    34,
+                    197,
+                    94,
+                    0.12
+                );
+
+            border:
+                1px solid #166534;
+
+            color:
+                #86efac;
+        }
+
+
+        .message.error {
+
+            display:
+                block;
+
+            background:
+                rgba(
+                    239,
+                    68,
+                    68,
+                    0.12
+                );
+
+            border:
+                1px solid #991b1b;
+
+            color:
+                #fca5a5;
+        }
+
+
+        /* ==================================================
+           FOOTER
+        ================================================== */
+
+        footer {
+
+            text-align:
+                center;
+
+            padding:
+                25px;
+
+            color:
+                #64748b;
+
+            font-size:
+                12px;
+        }
+
+
+        @media (
+            max-width: 650px
+        ) {
+
+            .container {
+
+                padding:
+                    15px;
+            }
+
+
+            .stats {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .header {
+
+                padding:
+                    15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- ======================================================
+     HEADER
+====================================================== -->
+
+<header class="header">
+
+    <div>
+
+        <h1>
+            Intelligent Log Generator
+        </h1>
+
+        <span>
+            SOC Monitoring & Security Testing
+        </span>
+
+    </div>
+
+
+    <span id="databaseStatus">
+        Database: Connected
+    </span>
+
+</header>
+
+
+
+<!-- ======================================================
+     MAIN
+====================================================== -->
+
+<main class="container">
+
+
+    <div class="grid">
+
+
+        <!-- =================================================
+             GENERATOR SETTINGS
+        ================================================== -->
+
+        <section class="card">
+
+            <h2>
+                Generator Settings
+            </h2>
+
+
+            <label for="logCount">
+                Number of Logs
+            </label>
+
+            <input
+                type="number"
+                id="logCount"
+                min="1"
+                max="500"
+                value="10"
+            >
+
+
+            <label for="statusMode">
+                HTTP Status
+            </label>
+
+            <select id="statusMode">
+
+                <option value="random">
+                    Random
+                </option>
+
+                <option value="200">
+                    200 OK
+                </option>
+
+                <option value="201">
+                    201 Created
+                </option>
+
+                <option value="401">
+                    401 Unauthorized
+                </option>
+
+                <option value="402">
+                    402 Payment Required
+                </option>
+
+                <option value="403">
+                    403 Forbidden
+                </option>
+
+                <option value="404">
+                    404 Not Found
+                </option>
+
+                <option value="500">
+                    500 Internal Server Error
+                </option>
+
+            </select>
+
+
+            <label for="endpointMode">
+                Endpoint
+            </label>
+
+            <select id="endpointMode">
+
+                <option value="random">
+                    Random
+                </option>
+
+                <option value="/">
+                    /
+                </option>
+
+                <option value="/login">
+                    /login
+                </option>
+
+                <option value="/products">
+                    /products
+                </option>
+
+                <option value="/orders">
+                    /orders
+                </option>
+
+                <option value="/health">
+                    /health
+                </option>
+
+                <option value="/admin">
+                    /admin
+                </option>
+
+                <option value="/unknown">
+                    /unknown
+                </option>
+
+            </select>
+
+
+            <label for="ipMode">
+                IP Address Mode
+            </label>
+
+            <select id="ipMode">
+
+                <option value="random">
+                    Random IPs
+                </option>
+
+                <option value="same">
+                    Same IP
+                </option>
+
+            </select>
+
+
+            <div class="buttons">
+
+                <button
+                    class="generate"
+                    onclick="generateLogs()"
+                >
+                    Generate Logs
+                </button>
+
+
+                <button
+                    class="brute"
+                    onclick="generateBruteForce()"
+                >
+                    Brute Force Test
+                </button>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             AUTOMATIC GENERATOR
+        ================================================== -->
+
+        <section class="card">
+
+            <h2>
+                Automatic Generator
+            </h2>
+
+
+            <p style="color:#94a3b8;font-size:13px;line-height:1.6;">
+
+                Automatically generate random logs and
+                send them to the SQLite database at the
+                selected interval.
+
+            </p>
+
+
+            <label for="interval">
+
+                Generation Interval
+
+            </label>
+
+
+            <select id="interval">
+
+                <option value="60000">
+                    Every 1 minute
+                </option>
+
+                <option
+                    value="120000"
+                    selected
+                >
+                    Every 2 minutes
+                </option>
+
+                <option value="300000">
+                    Every 5 minutes
+                </option>
+
+                <option value="600000">
+                    Every 10 minutes
+                </option>
+
+            </select>
+
+
+            <div class="buttons">
+
+                <button
+                    class="start"
+                    id="startButton"
+                    onclick="startAutoGeneration()"
+                >
+                    Start Auto Generator
+                </button>
+
+
+                <button
+                    class="stop"
+                    id="stopButton"
+                    onclick="stopAutoGeneration()"
+                    disabled
+                >
+                    Stop Auto Generator
+                </button>
+
+            </div>
+
+
+            <div class="auto-status">
+
+                <span
+                    class="status-dot"
+                    id="statusDot"
+                ></span>
+
+
+                <span id="autoStatusText">
+
+                    Automatic generator is stopped.
+
+                </span>
+
+            </div>
+
+
+            <div
+                id="nextGeneration"
+                style="
+                    margin-top:10px;
+                    color:#64748b;
+                    font-size:12px;
+                "
+            ></div>
+
+        </section>
+
+    </div>
+
+
+
+    <!-- ====================================================
+         STATISTICS
+    ===================================================== -->
+
+    <section class="card" style="margin-top:18px;">
+
+        <h2>
+            Generation Statistics
+        </h2>
+
+
+        <div class="stats">
+
+
+            <div class="stat">
+
+                <div
+                    class="stat-number"
+                    id="totalGenerated"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Logs Generated
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div
+                    class="stat-number"
+                    id="uniqueIPs"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Unique IPs
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div
+                    class="stat-number"
+                    id="errorsGenerated"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Error Logs
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+    </section>
+
+
+
+    <!-- ====================================================
+         GENERATED LOGS
+    ===================================================== -->
+
+    <section
+        class="card"
+        style="margin-top:18px;"
+    >
+
+        <h2>
+            Generated Log Data
+        </h2>
+
+
+        <textarea
+            id="logOutput"
+            readonly
+            placeholder="Generated logs will appear here..."
+        ></textarea>
+
+
+        <div class="buttons">
+
+            <button
+                class="clear"
+                onclick="clearOutput()"
+            >
+                Clear Output
+            </button>
+
+        </div>
+
+    </section>
+
+
+</main>
+
+
+
+<footer>
+
+    Intelligent Log Monitoring &
+    Security Analysis System
+
+</footer>
+
+
+
+<script>
+
+
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
+
+
+let autoTimer = null;
+
+let countdownTimer = null;
+
+let totalGenerated = 0;
+
+let totalErrors = 0;
+
+let lastGeneratedLogs = [];
+
+
+
+/* =========================================================
+   IP GENERATOR
+========================================================= */
+
+function randomIP() {
+
+    const lastOctet =
+        Math.floor(
+            Math.random() * 20
+        ) + 1;
+
+
+    return `10.0.0.${lastOctet}`;
+
+}
+
+
+
+/* =========================================================
+   RANDOM STATUS
+========================================================= */
+
+function randomStatus() {
+
+    const statuses = [
+
+        200,
+        200,
+        200,
+        200,
+
+        201,
+
+        401,
+
+        403,
+
+        404,
+
+        500
+
+    ];
+
+
+    return statuses[
+        Math.floor(
+            Math.random()
+            * statuses.length
+        )
+    ];
+
+}
+
+
+
+/* =========================================================
+   RANDOM ENDPOINT
+========================================================= */
+
+function randomEndpoint() {
+
+    const endpoints = [
+
+        "/",
+
+        "/login",
+
+        "/products",
+
+        "/orders",
+
+        "/health",
+
+        "/admin",
+
+        "/unknown"
+
+    ];
+
+
+    return endpoints[
+        Math.floor(
+            Math.random()
+            * endpoints.length
+        )
+    ];
+
+}
+
+
+
+/* =========================================================
+   RANDOM METHOD
+========================================================= */
+
+function randomMethod(
+    endpoint
+) {
+
+    if (
+        endpoint === "/login"
+    ) {
+
+        return "POST";
+
+    }
+
+
+    if (
+        endpoint === "/health"
+    ) {
+
+        return "GET";
+
+    }
+
+
+    const methods = [
+
+        "GET",
+        "GET",
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE"
+
+    ];
+
+
+    return methods[
+        Math.floor(
+            Math.random()
+            * methods.length
+        )
+    ];
+
+}
+
+
+
+/* =========================================================
+   RANDOM LATENCY
+========================================================= */
+
+function randomLatency() {
+
+    return Math.floor(
+        Math.random() * 190
+    ) + 10;
+
+}
+
+
+
+/* =========================================================
+   CREATE ONE LOG OBJECT
+========================================================= */
+
+function createLog(
+    forcedIP = null,
+    forcedStatus = null,
+    forcedEndpoint = null
+) {
+
+
+    const statusMode =
+        document.getElementById(
+            "statusMode"
+        ).value;
+
+
+    const endpointMode =
+        document.getElementById(
+            "endpointMode"
+        ).value;
+
+
+    const ipMode =
+        document.getElementById(
+            "ipMode"
+        ).value;
+
+
+
+    let ip;
+
+    let endpoint;
+
+    let status;
+
+
+
+    /* -----------------------------
+       IP
+    ----------------------------- */
+
+    if (forcedIP) {
+
+        ip = forcedIP;
+
+    }
+    else if (
+        ipMode === "same"
+    ) {
+
+        ip =
+            window.currentGeneratorIP
+            || randomIP();
+
+        window.currentGeneratorIP =
+            ip;
+
+    }
+    else {
+
+        ip =
+            randomIP();
+
+    }
+
+
+
+    /* -----------------------------
+       Endpoint
+    ----------------------------- */
+
+    if (forcedEndpoint) {
+
+        endpoint =
+            forcedEndpoint;
+
+    }
+    else if (
+        endpointMode === "random"
+    ) {
+
+        endpoint =
+            randomEndpoint();
+
+    }
+    else {
+
+        endpoint =
+            endpointMode;
+
+    }
+
+
+
+    /* -----------------------------
+       Status
+    ----------------------------- */
+
+    if (forcedStatus !== null) {
+
+        status =
+            forcedStatus;
+
+    }
+    else if (
+        statusMode === "random"
+    ) {
+
+        status =
+            randomStatus();
+
+    }
+    else {
+
+        status =
+            Number(statusMode);
+
+    }
+
+
+
+    const method =
+        randomMethod(endpoint);
+
+
+    const latency =
+        randomLatency();
+
+
+
+    return {
+
+        method:
+            method,
+
+        path:
+            endpoint,
+
+        status:
+            status,
+
+        latency:
+            latency,
+
+        ip:
+            ip
+
+    };
+
+}
+
+
+
+/* =========================================================
+   SEND LOGS TO FLASK
+========================================================= */
+
+async function sendLogsToDatabase(
+    logs
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/generator/logs",
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            logs:
+                                logs
+
+                        })
+
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (
+            !response.ok
+            ||
+            !result.success
+        ) {
+
+            throw new Error(
+                result.error
+                ||
+                "Database insertion failed"
+            );
+
+        }
+
+
+        showMessage(
+
+            `✓ ${result.inserted} log(s) successfully inserted into SQLite database.`,
+
+            "success"
+
+        );
+
+
+        /*
+         * Notify dashboard that new logs
+         * are available.
+         */
+
+        localStorage.setItem(
+
+            "logAnalyzerUpdated",
+
+            Date.now().toString()
+
+        );
+
+
+        return result;
+
+
+    }
+    catch (error) {
+
+        showMessage(
+
+            `✕ Database error: ${error.message}`,
+
+            "error"
+
+        );
+
+
+        console.error(
+            "Database error:",
+            error
+        );
+
+
+        return null;
+
+    }
+
+}
+
+
+
+/* =========================================================
+   GENERATE NORMAL LOGS
+========================================================= */
+
+async function generateLogs() {
+
+
+    const count =
+        Number(
+            document.getElementById(
+                "logCount"
+            ).value
+        );
+
+
+    if (
+        count < 1
+        ||
+        count > 500
+    ) {
+
+        showMessage(
+
+            "Please enter a number between 1 and 500.",
+
+            "error"
+
+        );
+
+        return;
+
+    }
+
+
+
+    const logs = [];
+
+    const outputLines = [];
+
+
+
+    /*
+     * Reset same-IP value
+     * for this generation batch.
+     */
+
+    window.currentGeneratorIP =
+        null;
+
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
+
+        const log =
+            createLog();
+
+
+        logs.push(log);
+
+
+        outputLines.push(
+
+            `${log.method} ${log.path} ${log.status} ${log.latency} ${log.ip}`
+
+        );
+
+    }
+
+
+
+    lastGeneratedLogs =
+        logs;
+
+
+    document.getElementById(
+        "logOutput"
+    ).value =
+        outputLines.join("\n");
+
+
+
+    updateStatistics(logs);
+
+
+
+    await sendLogsToDatabase(
+        logs
+    );
+
+}
+
+
+
+/* =========================================================
+   BRUTE FORCE TEST
+========================================================= */
+
+async function generateBruteForce() {
+
+
+    const attackerIP =
+        randomIP();
+
+
+    const logs = [];
+
+
+
+    for (
+        let i = 0;
+        i < 10;
+        i++
+    ) {
+
+        const log = {
+
+            method:
+                "POST",
+
+            path:
+                "/login",
+
+            status:
+                401,
+
+            latency:
+                Math.floor(
+                    Math.random() * 100
+                ) + 20,
+
+            ip:
+                attackerIP
+
+        };
+
+
+        logs.push(log);
+
+    }
+
+
+
+    lastGeneratedLogs =
+        logs;
+
+
+
+    document.getElementById(
+        "logOutput"
+    ).value =
+
+        logs.map(
+
+            log =>
+                `${log.method} ${log.path} ${log.status} ${log.latency} ${log.ip}`
+
+        ).join("\n");
+
+
+
+    updateStatistics(
+        logs
+    );
+
+
+
+    await sendLogsToDatabase(
+        logs
+    );
+
+
+
+    showMessage(
+
+        `✓ Brute-force test generated: 10 failed login attempts from ${attackerIP}`,
+
+        "success"
+
+    );
+
+}
+
+
+
+/* =========================================================
+   UPDATE STATISTICS
+========================================================= */
+
+function updateStatistics(
+    logs
+) {
+
+
+    totalGenerated +=
+        logs.length;
+
+
+    totalErrors +=
+
+        logs.filter(
+
+            log =>
+                log.status >= 400
+
+        ).length;
+
+
+
+    const uniqueIPs =
+        new Set(
+
+            logs.map(
+                log =>
+                    log.ip
+            )
+
+        ).size;
+
+
+
+    document.getElementById(
+        "totalGenerated"
+    ).textContent =
+        totalGenerated;
+
+
+    document.getElementById(
+        "uniqueIPs"
+    ).textContent =
+        uniqueIPs;
+
+
+    document.getElementById(
+        "errorsGenerated"
+    ).textContent =
+        totalErrors;
+
+}
+
+
+
+/* =========================================================
+   START AUTOMATIC GENERATOR
+========================================================= */
+
+function startAutoGeneration() {
+
+
+    if (autoTimer) {
+
+        return;
+
+    }
+
+
+
+    const interval =
+        Number(
+
+            document.getElementById(
+                "interval"
+            ).value
+
+        );
+
+
+
+    const startButton =
+        document.getElementById(
+            "startButton"
+        );
+
+
+    const stopButton =
+        document.getElementById(
+            "stopButton"
+        );
+
+
+    const statusDot =
+        document.getElementById(
+            "statusDot"
+        );
+
+
+    const statusText =
+        document.getElementById(
+            "autoStatusText"
+        );
+
+
+
+    startButton.disabled =
+        true;
+
+
+    stopButton.disabled =
+        false;
+
+
+    statusDot.classList.add(
+        "running"
+    );
+
+
+
+    const minutes =
+        interval / 60000;
+
+
+
+    statusText.textContent =
+
+        `Automatic generator is running — generating every ${minutes} minute(s).`;
+
+
+
+    /*
+     * Generate one batch immediately.
+     */
+
+    automaticGeneration();
+
+
+
+    /*
+     * Continue generating
+     * at selected interval.
+     */
+
+    autoTimer =
+        setInterval(
+
+            automaticGeneration,
+
+            interval
+
+        );
+
+
+
+    startCountdown(
+        interval
+    );
+
+}
+
+
+
+/* =========================================================
+   AUTOMATIC GENERATION
+========================================================= */
+
+async function automaticGeneration() {
+
+
+    /*
+     * Generate a random number
+     * of logs between 5 and 15.
+     */
+
+    const count =
+        Math.floor(
+            Math.random() * 11
+        ) + 5;
+
+
+
+    const logs = [];
+
+    const outputLines = [];
+
+
+
+    window.currentGeneratorIP =
+        null;
+
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
+
+        const log =
+            createLog();
+
+
+        logs.push(log);
+
+
+        outputLines.push(
+
+            `${log.method} ${log.path} ${log.status} ${log.latency} ${log.ip}`
+
+        );
+
+    }
+
+
+
+    lastGeneratedLogs =
+        logs;
+
+
+    document.getElementById(
+        "logOutput"
+    ).value =
+        outputLines.join("\n");
+
+
+
+    updateStatistics(
+        logs
+    );
+
+
+
+    const result =
+        await sendLogsToDatabase(
+            logs
+        );
+
+
+
+    if (result) {
+
+        console.log(
+
+            "Automatic generation:",
+            result.inserted,
+            "logs inserted"
+
+        );
+
+    }
+
+
+
+    /*
+     * Restart countdown after
+     * successful generation.
+     */
+
+    const interval =
+        Number(
+
+            document.getElementById(
+                "interval"
+            ).value
+
+        );
+
+
+    startCountdown(
+        interval
+    );
+
+}
+
+
+
+/* =========================================================
+   STOP AUTOMATIC GENERATOR
+========================================================= */
+
+function stopAutoGeneration() {
+
+
+    if (autoTimer) {
+
+        clearInterval(
+            autoTimer
+        );
+
+        autoTimer =
+            null;
+
+    }
+
+
+
+    if (countdownTimer) {
+
+        clearInterval(
+            countdownTimer
+        );
+
+        countdownTimer =
+            null;
+
+    }
+
+
+
+    document.getElementById(
+        "startButton"
+    ).disabled =
+        false;
+
+
+    document.getElementById(
+        "stopButton"
+    ).disabled =
+        true;
+
+
+    document.getElementById(
+        "statusDot"
+    ).classList.remove(
+        "running"
+    );
+
+
+    document.getElementById(
+        "autoStatusText"
+    ).textContent =
+
+        "Automatic generator is stopped.";
+
+
+    document.getElementById(
+        "nextGeneration"
+    ).textContent =
+        "";
+
+}
+
+
+
+/* =========================================================
+   COUNTDOWN
+========================================================= */
+
+function startCountdown(
+    milliseconds
+) {
+
+
+    if (countdownTimer) {
+
+        clearInterval(
+            countdownTimer
+        );
+
+    }
+
+
+
+    let remaining =
+        milliseconds;
+
+
+
+    function updateCountdown() {
+
+
+        if (!autoTimer) {
+
+            return;
+
+        }
+
+
+
+        const seconds =
+            Math.ceil(
+                remaining / 1000
+            );
+
+
+        const minutes =
+            Math.floor(
+                seconds / 60
+            );
+
+
+        const secs =
+            seconds % 60;
+
+
+
+        document.getElementById(
+            "nextGeneration"
+        ).textContent =
+
+            `Next automatic generation in ${minutes}m ${secs}s`;
+
+
+
+        remaining -=
+            1000;
+
+
+
+        if (
+            remaining < 0
+        ) {
+
+            remaining =
+                milliseconds;
+
+        }
+
+    }
+
+
+
+    updateCountdown();
+
+
+
+    countdownTimer =
+        setInterval(
+
+            updateCountdown,
+
+            1000
+
+        );
+
+}
+
+
+
+/* =========================================================
+   CLEAR OUTPUT
+========================================================= */
+
+function clearOutput() {
+
+
+    document.getElementById(
+        "logOutput"
+    ).value =
+        "";
+
+
+    showMessage(
+        "",
+        ""
+    );
+
+}
+
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+function showMessage(
+    text,
+    type
+) {
+
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+
+    message.textContent =
+        text;
+
+
+    message.className =
+        "message";
+
+
+    if (type) {
+
+        message.classList.add(
+            type
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   STOP AUTO GENERATOR WHEN PAGE CLOSES
+========================================================= */
+
+window.addEventListener(
+    "beforeunload",
+    function() {
+
+        if (autoTimer) {
+
+            clearInterval(
+                autoTimer
+            );
+
+        }
+
+        if (countdownTimer) {
+
+            clearInterval(
+                countdownTimer
+            );
+
+        }
+
+    }
+);
+
+
+</script>
+
+
+</body>
+
+</html>

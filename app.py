@@ -1,8 +1,7 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 import database
-from log_parser import parse_file
-from ai_detector import detect_anomalies
+import ai_detector
 
 
 app = Flask(__name__)
@@ -14,7 +13,6 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-
     return jsonify({
         "message": "Log Analyzer API is running",
         "stats_endpoint": "/stats",
@@ -23,6 +21,8 @@ def home():
         "status_endpoint": "/status-analysis",
         "endpoint_analysis_endpoint": "/endpoint-analysis",
         "ai_endpoint": "/ai",
+        "generator": "/generator",
+        "generator_api": "/api/generator/logs",
         "dashboard": "/dashboard"
     })
 
@@ -33,8 +33,114 @@ def home():
 
 @app.route("/dashboard")
 def dashboard():
-
     return render_template("dashboard.html")
+
+
+@app.route("/report")
+def report():
+    return render_template("report.html")
+
+# ============================================================
+# LOG GENERATOR PAGE
+# ============================================================
+
+@app.route("/generator")
+def generator():
+    return render_template("generator.html")
+
+
+# ============================================================
+# GENERATOR API
+# Receives generated logs and stores them in SQLite
+# ============================================================
+
+@app.route("/api/generator/logs", methods=["POST"])
+def receive_generated_logs():
+
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "No JSON data received"
+            }), 400
+
+        logs = data.get("logs", [])
+
+        if not isinstance(logs, list):
+            return jsonify({
+                "success": False,
+                "error": "logs must be a list"
+            }), 400
+
+        if len(logs) == 0:
+            return jsonify({
+                "success": False,
+                "error": "No logs supplied"
+            }), 400
+
+        inserted = 0
+
+        for log in logs:
+
+            try:
+
+                method = log.get("method")
+                path = log.get("path")
+                status = int(log.get("status"))
+                latency = int(log.get("latency"))
+                ip = log.get("ip")
+
+                if not all([method, path, ip]):
+                    continue
+
+                record = type(
+                    "GeneratedLog",
+                    (),
+                    {
+                        "method": method,
+                        "path": path,
+                        "status": status,
+                        "latency": latency,
+                        "ip": ip
+                    }
+                )()
+
+                database.insert_log(record)
+
+                inserted += 1
+
+            except Exception as log_error:
+
+                print(
+                    "Skipping invalid generated log:",
+                    log_error
+                )
+
+        if inserted > 0:
+
+            return jsonify({
+                "success": True,
+                "message": "Generated logs inserted into database",
+                "received": len(logs),
+                "inserted": inserted,
+                "database": "log_analyzer.db"
+            })
+
+        return jsonify({
+            "success": False,
+            "error": "No valid logs were inserted"
+        }), 400
+
+    except Exception as e:
+
+        print("Generator API error:", e)
+
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 # ============================================================
@@ -59,6 +165,12 @@ def stats():
         average_latency = 0
 
 
+    if total > 0:
+        error_rate = (errors / total) * 100
+    else:
+        error_rate = 0
+
+
     return jsonify({
 
         "total_requests": total,
@@ -66,9 +178,9 @@ def stats():
         "errors": errors,
 
         "error_rate": round(
-            (errors / total) * 100,
+            error_rate,
             2
-        ) if total > 0 else 0,
+        ),
 
         "average_latency_ms": round(
             average_latency,
@@ -76,7 +188,6 @@ def stats():
         ),
 
         "top_ips": [
-
             {
                 "ip": ip,
                 "requests": count
@@ -86,7 +197,6 @@ def stats():
         ],
 
         "top_endpoints": [
-
             {
                 "endpoint": path,
                 "requests": count
@@ -183,7 +293,7 @@ def security():
 
 
     # --------------------------------------------------------
-    # Brute-force alerts
+    # BRUTE FORCE ALERTS
     # --------------------------------------------------------
 
     for ip, count in brute_force:
@@ -203,7 +313,7 @@ def security():
 
 
     # --------------------------------------------------------
-    # Risk alerts
+    # RISK SCORE ALERTS
     # --------------------------------------------------------
 
     for ip, score in risk_scores:
@@ -241,25 +351,23 @@ def security():
 
 
     # --------------------------------------------------------
-    # Failed login data
+    # FAILED LOGIN DATA
     # --------------------------------------------------------
 
-    failed_login_data = []
+    failed_login_data = [
 
-
-    for ip, count in failed_logins:
-
-        failed_login_data.append({
-
+        {
             "ip": ip,
-
             "attempts": count
+        }
 
-        })
+        for ip, count in failed_logins
+
+    ]
 
 
     # --------------------------------------------------------
-    # Risk score data
+    # RISK SCORE DATA
     # --------------------------------------------------------
 
     risk_score_data = []
@@ -306,7 +414,7 @@ def security():
 
 
 # ============================================================
-# AI / MACHINE LEARNING ANOMALY DETECTION
+# AI ANOMALY DETECTION
 # ============================================================
 
 @app.route("/ai")
@@ -314,10 +422,25 @@ def ai_analysis():
 
     try:
 
-        records = parse_file("access.log")
+        # ----------------------------------------------------
+        # Load logs directly from SQLite database
+        # ----------------------------------------------------
 
-        results = detect_anomalies(records)
+        records = ai_detector.load_database_records()
 
+
+        # ----------------------------------------------------
+        # Run Isolation Forest anomaly detection
+        # ----------------------------------------------------
+
+        results = ai_detector.detect_anomalies(
+            records
+        )
+
+
+        # ----------------------------------------------------
+        # Get only anomalous IPs
+        # ----------------------------------------------------
 
         anomalies = [
 
@@ -325,14 +448,36 @@ def ai_analysis():
 
             for result in results
 
-            if result["status"] == "ANOMALY"
+            if result.get("status") == "ANOMALY"
 
         ]
 
 
+        # ----------------------------------------------------
+        # Calculate total logs analyzed
+        # ----------------------------------------------------
+
+        total_logs = sum(
+
+            result["total_requests"]
+
+            for result in results
+
+        )
+
+
+        # ----------------------------------------------------
+        # Return AI analysis
+        # ----------------------------------------------------
+
         return jsonify({
 
             "success": True,
+
+            "data_source": "SQLite database",
+
+            "total_logs_analyzed":
+                total_logs,
 
             "total_ips_analyzed":
                 len(results),
@@ -351,22 +496,91 @@ def ai_analysis():
 
     except Exception as e:
 
+        print(
+            "AI analysis error:",
+            e
+        )
+
+
         return jsonify({
 
             "success": False,
 
-            "error":
-                str(e)
+            "error": str(e)
 
         }), 500
 
 
 # ============================================================
-# PROGRAM ENTRY POINT
+# 404 ERROR HANDLER
+# ============================================================
+
+@app.errorhandler(404)
+def page_not_found(error):
+
+    return jsonify({
+
+        "success": False,
+
+        "error": "Endpoint not found",
+
+        "available_endpoints": [
+
+            "/",
+
+            "/dashboard",
+
+            "/generator",
+
+            "/stats",
+
+            "/security",
+
+            "/ip-analysis",
+
+            "/status-analysis",
+
+            "/endpoint-analysis",
+
+            "/ai",
+
+            "/api/generator/logs"
+
+        ]
+
+    }), 404
+
+
+# ============================================================
+# 500 ERROR HANDLER
+# ============================================================
+
+@app.errorhandler(500)
+def internal_server_error(error):
+
+    return jsonify({
+
+        "success": False,
+
+        "error": "Internal server error"
+
+    }), 500
+
+
+# ============================================================
+# START FLASK APPLICATION
 # ============================================================
 
 if __name__ == "__main__":
 
+    database.create_database()
+
     app.run(
+
+        host="127.0.0.1",
+
+        port=5000,
+
         debug=True
+
     )

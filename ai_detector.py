@@ -1,9 +1,9 @@
-from collections import Counter
 from statistics import mean
 
 from sklearn.ensemble import IsolationForest
 
-from log_parser import parse_file
+import database
+from log_parser import LogRecord
 
 
 # ============================================================
@@ -39,11 +39,16 @@ def build_ip_features(records):
             data["errors"] += 1
 
         # Failed login
-        if record.path == "/login" and record.status == 401:
+        if (
+            record.path == "/login"
+            and record.status == 401
+        ):
             data["failed_logins"] += 1
 
         # Latency
-        data["latencies"].append(record.latency)
+        data["latencies"].append(
+            record.latency
+        )
 
     features = []
     ips = []
@@ -90,9 +95,8 @@ def detect_anomalies(records):
 
     ips, features = build_ip_features(records)
 
-    # Need at least a few IPs for comparison
+    # Need at least 3 IPs for meaningful comparison
     if len(features) < 3:
-
         return []
 
     # Isolation Forest
@@ -105,11 +109,18 @@ def detect_anomalies(records):
 
     predictions = model.predict(features)
 
-    anomaly_scores = model.decision_function(features)
+    anomaly_scores = (
+        model.decision_function(features)
+    )
 
     results = []
 
-    for ip, prediction, score, feature in zip(
+    for (
+        ip,
+        prediction,
+        score,
+        feature
+    ) in zip(
         ips,
         predictions,
         anomaly_scores,
@@ -131,50 +142,109 @@ def detect_anomalies(records):
             status = "NORMAL"
 
         results.append({
-            "ip": ip,
-            "status": status,
-            "anomaly_score": round(
-                float(score),
-                4
-            ),
-            "total_requests": total_requests,
-            "errors": errors,
-            "failed_logins": failed_logins,
-            "average_latency": round(
-                average_latency,
-                2
-            ),
-            "error_rate": round(
-                error_rate * 100,
-                2
-            )
+
+            "ip":
+                ip,
+
+            "status":
+                status,
+
+            "anomaly_score":
+                round(
+                    float(score),
+                    4
+                ),
+
+            "total_requests":
+                total_requests,
+
+            "errors":
+                errors,
+
+            "failed_logins":
+                failed_logins,
+
+            "average_latency":
+                round(
+                    average_latency,
+                    2
+                ),
+
+            "error_rate":
+                round(
+                    error_rate * 100,
+                    2
+                )
+
         })
 
     # Most suspicious first
     results.sort(
-        key=lambda item: item["anomaly_score"]
+        key=lambda item:
+            item["anomaly_score"]
     )
 
     return results
 
 
 # ============================================================
+# LOAD LOGS FROM SQLITE
+# ============================================================
+
+def load_database_records():
+    """
+    Load all logs from SQLite and convert them
+    into LogRecord objects.
+    """
+
+    rows = database.get_all_logs()
+
+    records = []
+
+    for row in rows:
+
+        method = row[0]
+        path = row[1]
+        status = int(row[2])
+        latency = int(row[3])
+        ip = row[4]
+
+        record = LogRecord(
+            method=method,
+            path=path,
+            status=status,
+            latency=latency,
+            ip=ip
+        )
+
+        records.append(record)
+
+    return records
+
+
+# ============================================================
+# DATABASE AI ANALYSIS
+# ============================================================
+
+def analyze_database():
+    """
+    Run AI anomaly detection on logs stored
+    in the SQLite database.
+    """
+
+    records = load_database_records()
+
+    if not records:
+        return []
+
+    return detect_anomalies(records)
+
+
+# ============================================================
 # PRINT RESULTS
 # ============================================================
 
-def main():
-
-    print("========================================")
-    print(" AI ANOMALY DETECTION")
-    print("========================================")
-
-    records = parse_file("access.log")
-
-    print(
-        f"\nAnalyzing {len(records)} log records..."
-    )
-
-    results = detect_anomalies(records)
+def print_results(results):
 
     if not results:
 
@@ -227,6 +297,38 @@ def main():
         )
 
 
+# ============================================================
+# PROGRAM ENTRY POINT
+# ============================================================
+
+def main():
+
+    print("========================================")
+    print(" AI ANOMALY DETECTION")
+    print("========================================")
+
+    print(
+        "\nLoading logs from SQLite database..."
+    )
+
+    records = load_database_records()
+
+    print(
+        f"Loaded {len(records)} log records."
+    )
+
+    results = detect_anomalies(records)
+
+    if not results:
+
+        print(
+            "\nNot enough IP data for anomaly detection."
+        )
+
+        return
+
+    print_results(results)
+
     # --------------------------------------------------------
     # Anomaly Summary
     # --------------------------------------------------------
@@ -242,11 +344,13 @@ def main():
     print("========================================")
 
     print(
-        f"Total IPs analyzed: {len(results)}"
+        f"Total IPs analyzed: "
+        f"{len(results)}"
     )
 
     print(
-        f"Anomalous IPs: {len(anomalies)}"
+        f"Anomalous IPs: "
+        f"{len(anomalies)}"
     )
 
     if anomalies:

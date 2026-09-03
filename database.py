@@ -1,31 +1,61 @@
 import sqlite3
+
 from log_parser import parse_file
 
 
 # ============================================================
-# DATABASE CREATION
+# DATABASE FILE
+# ============================================================
+
+DATABASE_NAME = "log_analyzer.db"
+
+
+# ============================================================
+# DATABASE CONNECTION
+# ============================================================
+
+def get_connection():
+
+    return sqlite3.connect(
+        DATABASE_NAME
+    )
+
+
+# ============================================================
+# CREATE DATABASE
 # ============================================================
 
 def create_database():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS logs (
+
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            method TEXT,
-            path TEXT,
-            status INTEGER,
-            latency INTEGER,
-            ip TEXT
+
+            method TEXT NOT NULL,
+
+            path TEXT NOT NULL,
+
+            status INTEGER NOT NULL,
+
+            latency INTEGER NOT NULL,
+
+            ip TEXT NOT NULL
+
         )
     """)
 
     connection.commit()
+
     connection.close()
 
-    print("Database created successfully!")
+    print(
+        "Database created successfully!"
+    )
 
 
 # ============================================================
@@ -34,27 +64,84 @@ def create_database():
 
 def insert_log(record):
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         INSERT INTO logs (
+
             method,
             path,
             status,
             latency,
             ip
+
         )
+
         VALUES (?, ?, ?, ?, ?)
+
     """, (
+
         record.method,
+
         record.path,
+
         record.status,
+
         record.latency,
+
         record.ip
+
     ))
 
     connection.commit()
+
+    connection.close()
+
+
+# ============================================================
+# INSERT MULTIPLE LOGS
+# ============================================================
+
+def insert_logs(records):
+
+    if not records:
+        return
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.executemany("""
+        INSERT INTO logs (
+
+            method,
+            path,
+            status,
+            latency,
+            ip
+
+        )
+
+        VALUES (?, ?, ?, ?, ?)
+
+    """, [
+
+        (
+            record.method,
+            record.path,
+            record.status,
+            record.latency,
+            record.ip
+        )
+
+        for record in records
+
+    ])
+
+    connection.commit()
+
     connection.close()
 
 
@@ -64,36 +151,21 @@ def insert_log(record):
 
 def clear_logs():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
-    cursor.execute("DELETE FROM logs")
+    cursor.execute(
+        "DELETE FROM logs"
+    )
 
     connection.commit()
-    connection.close()
-
-    print("Old logs cleared!")
-
-
-# ============================================================
-# VIEW LOGS
-# ============================================================
-
-def view_logs():
-
-    connection = sqlite3.connect("log_analyzer.db")
-    cursor = connection.cursor()
-
-    cursor.execute("SELECT * FROM logs")
-
-    logs = cursor.fetchall()
-
-    print("\nStored Logs:")
-
-    for log in logs:
-        print(log)
 
     connection.close()
+
+    print(
+        "Old logs cleared!"
+    )
 
 
 # ============================================================
@@ -102,7 +174,8 @@ def view_logs():
 
 def get_total_requests():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -123,12 +196,15 @@ def get_total_requests():
 
 def get_error_count():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         SELECT COUNT(*)
+
         FROM logs
+
         WHERE status >= 400
     """)
 
@@ -145,7 +221,8 @@ def get_error_count():
 
 def get_average_latency():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -157,7 +234,10 @@ def get_average_latency():
 
     connection.close()
 
-    return average if average is not None else 0
+    if average is None:
+        return 0
+
+    return average
 
 
 # ============================================================
@@ -166,15 +246,21 @@ def get_average_latency():
 
 def get_top_ips():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         SELECT
+
             ip,
+
             COUNT(*) AS request_count
+
         FROM logs
+
         GROUP BY ip
+
         ORDER BY request_count DESC
     """)
 
@@ -191,15 +277,21 @@ def get_top_ips():
 
 def get_top_endpoints():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         SELECT
+
             path,
+
             COUNT(*) AS request_count
+
         FROM logs
+
         GROUP BY path
+
         ORDER BY request_count DESC
     """)
 
@@ -216,17 +308,25 @@ def get_top_endpoints():
 
 def get_failed_logins():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         SELECT
+
             ip,
+
             COUNT(*) AS failed_logins
+
         FROM logs
+
         WHERE path = '/login'
+
         AND status = 401
+
         GROUP BY ip
+
         ORDER BY failed_logins DESC
     """)
 
@@ -243,18 +343,27 @@ def get_failed_logins():
 
 def get_brute_force_ips():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         SELECT
+
             ip,
+
             COUNT(*) AS failed_logins
+
         FROM logs
+
         WHERE path = '/login'
+
         AND status = 401
+
         GROUP BY ip
+
         HAVING COUNT(*) >= 5
+
         ORDER BY failed_logins DESC
     """)
 
@@ -266,44 +375,50 @@ def get_brute_force_ips():
 
 
 # ============================================================
-# SECURITY RISK SCORE
-#
-# PARAMETERS:
-#
-# 1. Failed login attempts >= 5  → +50
-# 2. Total requests > 10         → +20
-# 3. Error rate >= 50%           → +30
-#
-# Maximum score = 100
+# SECURITY RISK SCORES
 # ============================================================
 
 def get_risk_scores():
 
-    connection = sqlite3.connect("log_analyzer.db")
+    connection = get_connection()
+
     cursor = connection.cursor()
 
     cursor.execute("""
         SELECT
+
             ip,
 
             COUNT(*) AS total_requests,
 
             SUM(
+
                 CASE
-                    WHEN path = '/login'
-                    AND status = 401
+
+                    WHEN status = 401
+                    AND path = '/login'
+
                     THEN 1
+
                     ELSE 0
+
                 END
+
             ) AS failed_logins,
 
             SUM(
+
                 CASE
-                    WHEN status >= 400
+
+                    WHEN status IN (403, 404)
+
                     THEN 1
+
                     ELSE 0
+
                 END
-            ) AS errors
+
+            ) AS suspicious_responses
 
         FROM logs
 
@@ -316,60 +431,360 @@ def get_risk_scores():
 
     results = []
 
-    for ip, total_requests, failed_logins, errors in rows:
 
-        # Start with zero risk
+    for (
+
+        ip,
+
+        total_requests,
+
+        failed_logins,
+
+        suspicious_responses
+
+    ) in rows:
+
+        failed_logins = (
+            failed_logins or 0
+        )
+
+        suspicious_responses = (
+            suspicious_responses or 0
+        )
+
+
         score = 0
 
+
         # ----------------------------------------------------
-        # PARAMETER 1
-        # Brute-force / Failed Login Risk
+        # BRUTE-FORCE
         # ----------------------------------------------------
 
         if failed_logins >= 5:
+
             score += 50
 
+
         # ----------------------------------------------------
-        # PARAMETER 2
-        # High Request Volume Risk
+        # HIGH REQUEST VOLUME
         # ----------------------------------------------------
 
         if total_requests > 10:
+
             score += 20
 
+
         # ----------------------------------------------------
-        # PARAMETER 3
-        # High Error Rate Risk
+        # SCANNING / RECONNAISSANCE
         # ----------------------------------------------------
 
-        error_rate = (
-            errors / total_requests
-            if total_requests > 0
-            else 0
-        )
+        if suspicious_responses >= 5:
 
-        if error_rate >= 0.50:
             score += 30
 
+
         # ----------------------------------------------------
-        # Maximum Risk Score
+        # MAXIMUM SCORE
         # ----------------------------------------------------
 
         if score > 100:
+
             score = 100
 
+
         results.append(
-            (ip, score)
+
+            (
+                ip,
+                score
+            )
+
         )
 
+
     # Highest risk first
+
     results.sort(
+
         key=lambda item: item[1],
+
         reverse=True
+
     )
 
     return results
 
+
+# ============================================================
+# HTTP STATUS DISTRIBUTION
+# ============================================================
+
+def get_status_distribution():
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+
+            status,
+
+            COUNT(*) AS request_count
+
+        FROM logs
+
+        GROUP BY status
+
+        ORDER BY status
+    """)
+
+    results = cursor.fetchall()
+
+    connection.close()
+
+    return results
+
+
+# ============================================================
+# IP ANALYSIS
+# ============================================================
+
+def get_ip_analysis():
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+
+            ip,
+
+            COUNT(*) AS total_requests,
+
+            SUM(
+
+                CASE
+
+                    WHEN status >= 400
+
+                    THEN 1
+
+                    ELSE 0
+
+                END
+
+            ) AS errors,
+
+            AVG(latency) AS average_latency
+
+        FROM logs
+
+        GROUP BY ip
+
+        ORDER BY total_requests DESC
+    """)
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    results = []
+
+
+    for (
+
+        ip,
+
+        total_requests,
+
+        errors,
+
+        average_latency
+
+    ) in rows:
+
+        errors = errors or 0
+
+        average_latency = (
+            average_latency or 0
+        )
+
+
+        if total_requests > 0:
+
+            error_rate = (
+                errors /
+                total_requests
+            ) * 100
+
+        else:
+
+            error_rate = 0
+
+
+        results.append({
+
+            "ip":
+                ip,
+
+            "total_requests":
+                total_requests,
+
+            "errors":
+                errors,
+
+            "error_rate":
+                round(
+                    error_rate,
+                    2
+                ),
+
+            "average_latency_ms":
+                round(
+                    average_latency,
+                    2
+                )
+
+        })
+
+
+    return results
+
+
+# ============================================================
+# ENDPOINT ANALYSIS
+# ============================================================
+
+def get_endpoint_analysis():
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+
+            path,
+
+            COUNT(*) AS total_requests,
+
+            SUM(
+
+                CASE
+
+                    WHEN status >= 400
+
+                    THEN 1
+
+                    ELSE 0
+
+                END
+
+            ) AS errors,
+
+            AVG(latency) AS average_latency
+
+        FROM logs
+
+        GROUP BY path
+
+        ORDER BY total_requests DESC
+    """)
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    results = []
+
+
+    for (
+
+        path,
+
+        total_requests,
+
+        errors,
+
+        average_latency
+
+    ) in rows:
+
+        errors = errors or 0
+
+        average_latency = (
+            average_latency or 0
+        )
+
+
+        if total_requests > 0:
+
+            error_rate = (
+                errors /
+                total_requests
+            ) * 100
+
+        else:
+
+            error_rate = 0
+
+
+        results.append({
+
+            "endpoint":
+                path,
+
+            "total_requests":
+                total_requests,
+
+            "errors":
+                errors,
+
+            "error_rate":
+                round(
+                    error_rate,
+                    2
+                ),
+
+            "average_latency_ms":
+                round(
+                    average_latency,
+                    2
+                )
+
+        })
+
+
+    return results
+
+# ============================================================
+# GET ALL LOGS FOR AI ANALYSIS
+# ============================================================
+
+def get_all_logs():
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+            method,
+            path,
+            status,
+            latency,
+            ip
+        FROM logs
+        ORDER BY id ASC
+    """)
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return rows
 
 # ============================================================
 # PROGRAM ENTRY POINT
@@ -377,64 +792,83 @@ def get_risk_scores():
 
 if __name__ == "__main__":
 
+    print()
     print("========================================")
     print("       LOG ANALYZER DATABASE")
     print("========================================")
+    print()
 
-    # --------------------------------------------------------
     # Create database
-    # --------------------------------------------------------
 
     create_database()
 
-    # --------------------------------------------------------
-    # Clear old logs
-    # --------------------------------------------------------
+
+    # Clear existing logs
 
     clear_logs()
 
-    # --------------------------------------------------------
+
     # Parse access.log
-    # --------------------------------------------------------
 
-    records = parse_file("access.log")
-
-    print(
-        f"\nParsed {len(records)} log records."
+    records = parse_file(
+        "access.log"
     )
 
-    # --------------------------------------------------------
-    # Insert parsed logs
-    # --------------------------------------------------------
+    print(
+        f"Parsed {len(records)} log records."
+    )
 
-    for record in records:
-        insert_log(record)
 
-    print("Logs inserted successfully!")
+    # Insert logs
+
+    insert_logs(
+        records
+    )
+
+    print(
+        "Logs inserted successfully!"
+    )
+
 
     # ========================================================
     # GENERAL STATISTICS
     # ========================================================
 
-    print("\n========================================")
+    print()
+    print("========================================")
     print("GENERAL STATISTICS")
     print("========================================")
 
     total = get_total_requests()
+
+    errors = get_error_count()
+
+    average_latency = (
+        get_average_latency()
+    )
+
+
+    if total > 0:
+
+        error_rate = (
+            errors /
+            total
+        ) * 100
+
+    else:
+
+        error_rate = 0
+
 
     print(
         "Total Requests:",
         total
     )
 
-    errors = get_error_count()
-
     print(
         "Errors:",
         errors
     )
-
-    average_latency = get_average_latency()
 
     print(
         "Average Latency:",
@@ -443,13 +877,6 @@ if __name__ == "__main__":
             2
         ),
         "ms"
-    )
-
-    # Error rate
-    error_rate = (
-        (errors / total) * 100
-        if total > 0
-        else 0
     )
 
     print(
@@ -461,47 +888,52 @@ if __name__ == "__main__":
         "%"
     )
 
+
     # ========================================================
-    # TOP IP ADDRESSES
+    # TOP IPS
     # ========================================================
 
-    print("\n========================================")
+    print()
+    print("========================================")
     print("TOP IP ADDRESSES")
     print("========================================")
 
-    top_ips = get_top_ips()
-
-    for ip, count in top_ips:
+    for ip, count in get_top_ips():
 
         print(
             f"{ip}: {count} requests"
         )
 
+
     # ========================================================
-    # MOST REQUESTED ENDPOINTS
+    # TOP ENDPOINTS
     # ========================================================
 
-    print("\n========================================")
+    print()
+    print("========================================")
     print("MOST REQUESTED ENDPOINTS")
     print("========================================")
 
-    top_endpoints = get_top_endpoints()
-
-    for path, count in top_endpoints:
+    for path, count in get_top_endpoints():
 
         print(
             f"{path}: {count} requests"
         )
 
+
     # ========================================================
-    # FAILED LOGIN ATTEMPTS
+    # FAILED LOGINS
     # ========================================================
 
-    print("\n========================================")
+    print()
+    print("========================================")
     print("FAILED LOGIN ATTEMPTS")
     print("========================================")
 
-    failed_logins = get_failed_logins()
+    failed_logins = (
+        get_failed_logins()
+    )
+
 
     if failed_logins:
 
@@ -518,23 +950,30 @@ if __name__ == "__main__":
             "No failed login attempts detected."
         )
 
+
     # ========================================================
-    # BRUTE-FORCE DETECTION
+    # BRUTE FORCE
     # ========================================================
 
-    print("\n========================================")
+    print()
+    print("========================================")
     print("BRUTE-FORCE DETECTION")
     print("========================================")
 
-    brute_force = get_brute_force_ips()
+    brute_force = (
+        get_brute_force_ips()
+    )
+
 
     if brute_force:
 
         for ip, count in brute_force:
 
             print(
+
                 f"WARNING: {ip} has "
                 f"{count} failed login attempts"
+
             )
 
     else:
@@ -543,15 +982,20 @@ if __name__ == "__main__":
             "No possible brute-force attacks detected."
         )
 
+
     # ========================================================
-    # SECURITY RISK SCORES
+    # RISK SCORES
     # ========================================================
 
-    print("\n========================================")
+    print()
+    print("========================================")
     print("SECURITY RISK SCORES")
     print("========================================")
 
-    risk_scores = get_risk_scores()
+    risk_scores = (
+        get_risk_scores()
+    )
+
 
     for ip, score in risk_scores:
 
@@ -567,36 +1011,33 @@ if __name__ == "__main__":
 
             risk = "LOW"
 
+
         print(
+
             f"{ip}: "
             f"Score={score}, "
             f"Risk={risk}"
+
         )
 
+
     # ========================================================
-    # RISK PARAMETERS
+    # STATUS DISTRIBUTION
     # ========================================================
 
-    print("\n========================================")
-    print("RISK PARAMETERS")
+    print()
+    print("========================================")
+    print("HTTP STATUS DISTRIBUTION")
     print("========================================")
 
-    print(
-        "1. Failed logins >= 5  → +50 points"
-    )
+    for status, count in get_status_distribution():
 
-    print(
-        "2. Requests > 10       → +20 points"
-    )
+        print(
+            f"{status}: {count} requests"
+        )
 
-    print(
-        "3. Error rate >= 50%   → +30 points"
-    )
 
-    print(
-        "Maximum Risk Score     → 100"
-    )
-
-    print("\n========================================")
+    print()
+    print("========================================")
     print("DATABASE ANALYSIS COMPLETE")
     print("========================================")
