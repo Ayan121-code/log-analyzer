@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 from log_parser import parse_file
 
@@ -7,12 +8,12 @@ from log_parser import parse_file
 # DATABASE FILE
 # ============================================================
 
-DATABASE_NAME = "log_analyzer.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
-# ============================================================
-# DATABASE CONNECTION
-# ============================================================
+DATABASE_NAME = os.path.join(
+    BASE_DIR,
+    "log_analyzer.db"
+)===============================
 
 def get_connection():
 

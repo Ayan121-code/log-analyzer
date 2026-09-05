@@ -1,1 +1,1 @@
-web:gunicorn app:app
+web: python -c "import database; database.create_database()" && gunicorn app:app
