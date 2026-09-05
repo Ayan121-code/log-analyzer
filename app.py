@@ -23,7 +23,8 @@ def home():
         "ai_endpoint": "/ai",
         "generator": "/generator",
         "generator_api": "/api/generator/logs",
-        "dashboard": "/dashboard"
+        "dashboard": "/dashboard",
+        "report": "/report"
     })
 
 
@@ -36,9 +37,14 @@ def dashboard():
     return render_template("dashboard.html")
 
 
+# ============================================================
+# REPORT
+# ============================================================
+
 @app.route("/report")
 def report():
     return render_template("report.html")
+
 
 # ============================================================
 # LOG GENERATOR PAGE
@@ -85,7 +91,6 @@ def receive_generated_logs():
         for log in logs:
 
             try:
-
                 method = log.get("method")
                 path = log.get("path")
                 status = int(log.get("status"))
@@ -160,16 +165,13 @@ def stats():
 
     top_endpoints = database.get_top_endpoints()
 
-
     if average_latency is None:
         average_latency = 0
-
 
     if total > 0:
         error_rate = (errors / total) * 100
     else:
         error_rate = 0
-
 
     return jsonify({
 
@@ -192,7 +194,6 @@ def stats():
                 "ip": ip,
                 "requests": count
             }
-
             for ip, count in top_ips
         ],
 
@@ -201,7 +202,6 @@ def stats():
                 "endpoint": path,
                 "requests": count
             }
-
             for path, count in top_endpoints
         ]
 
@@ -247,7 +247,6 @@ def status_analysis():
 
         })
 
-
     return jsonify({
 
         "success": True,
@@ -287,7 +286,6 @@ def security():
     risk_scores = database.get_risk_scores()
 
     brute_force = database.get_brute_force_ips()
-
 
     alerts = []
 
@@ -333,7 +331,6 @@ def security():
 
             })
 
-
         elif score >= 20:
 
             alerts.append({
@@ -372,21 +369,16 @@ def security():
 
     risk_score_data = []
 
-
     for ip, score in risk_scores:
 
         if score >= 50:
-
             risk = "HIGH"
 
         elif score >= 20:
-
             risk = "MEDIUM"
 
         else:
-
             risk = "LOW"
-
 
         risk_score_data.append({
 
@@ -501,7 +493,6 @@ def ai_analysis():
             e
         )
 
-
         return jsonify({
 
             "success": False,
@@ -529,6 +520,8 @@ def page_not_found(error):
             "/",
 
             "/dashboard",
+
+            "/report",
 
             "/generator",
 
@@ -577,10 +570,10 @@ if __name__ == "__main__":
 
     app.run(
 
-        host="127.0.0.1",
+        host="0.0.0.0",
 
         port=5000,
 
-        debug=True
+        debug=False
 
     )
